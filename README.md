@@ -1,7 +1,10 @@
 # Machine Learning (ML)
 
 ## Notes for TFLite Model implementation
-Please daily check and use latest version of TFLite model file
+Please daily check and use latest updated TFLite model file
+
+ID_LANG:
+"Untuk file TFlite akan diupdate sewaktu-waktu, gunakan file TFLite terbaru"
 
 Reference:
 https://developer.android.com/ml?hl=id
