@@ -3,6 +3,7 @@ Readme 1st
 
 ## Notebook
 The notebook already have output. Use google colab is recommended
+Added Loss-Accuracy Graph and Post-Training Confusion Matrix
 
 NB: If error, look/refer to python script (medleaf_test.py)
 
