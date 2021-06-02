@@ -1,4 +1,4 @@
-## List of Medical Leaf datasets
+## List of Medical Leaf Labels
 
 | No | Nama | Manfaat | Kandungan nutrisi |
 | :---: | :---: | :---: | :---: |
