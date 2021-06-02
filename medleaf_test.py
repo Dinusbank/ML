@@ -20,7 +20,7 @@ https://www.tensorflow.org/lite/guide/model_maker
 *NB: Please try this notebook on Google Colab*
 <br>
 <br>
-### **1). Install TFLite Model Maker**
+### **1). Install TensorFlow-Lite Model Maker**
 Run cell below to ensure your machine have installed tflite-model-maker library
 """
 
@@ -30,9 +30,13 @@ Run cell below to ensure your machine have installed tflite-model-maker library
 Import tflite-model-maker below for image processing preparation
 """
 
+import matplotlib.pyplot as plt
+import numpy as np
+
 import os
 
-import numpy as np
+import seaborn as sn
+from sklearn.metrics import confusion_matrix
 
 import tensorflow as tf
 assert tf.__version__.startswith('2')
@@ -42,8 +46,6 @@ from tflite_model_maker import image_classifier
 from tflite_model_maker.config import ExportFormat
 from tflite_model_maker.config import QuantizationConfig
 from tflite_model_maker.image_classifier import DataLoader
-
-import matplotlib.pyplot as plt
 
 """### **3). Locate the Datasets**
 Here, you must locate the datasets location/directory.
@@ -86,8 +88,8 @@ for i, (image, label) in enumerate(
 
 plt.show()
 
-"""### **7). Use pre-trained model**
-Here, we use EfficientNet Lite0 as a base model for image classification and build custom tflite model
+"""### **7). Use Pre-trained Model**
+Here, we use EfficientNet Lite1 as a base model for image classification and build custom tflite model
 
 More info, click here:
 <br>
@@ -103,19 +105,48 @@ Here, we begin train the entire datasets and also create custom model based on p
 model = image_classifier.create(train_data,
                                 epochs=10,
                                 validation_data=validation_data,
+                                use_augmentation=True,
+                                shuffle=True,
                                 model_spec=efficientnet_model)
 
 """### **9). Display Model Summary**"""
 
 model.summary()
 
-"""### **10). Evaluate the Model**
+"""### **10). Display Model Training-Validation Loss and Accuracy**"""
+
+# Commented out IPython magic to ensure Python compatibility.
+# %matplotlib inline
+
+#Loss graph
+plt.figure(figsize=(8, 6))
+plt.plot(model.history.history["loss"])
+plt.plot(model.history.history["val_loss"])
+plt.title("Loss")
+plt.ylabel("Losses")
+plt.xlabel("Epochs")
+plt.grid(True)
+plt.legend(["training", "validation"], loc="upper left")
+plt.show()
+
+#Accuracy graph
+plt.figure(figsize=(8, 6))
+plt.plot(model.history.history["accuracy"])
+plt.plot(model.history.history["val_accuracy"])
+plt.title("Accuracy")
+plt.ylabel("Accuracies")
+plt.xlabel("Epochs")
+plt.grid(True)
+plt.legend(["training", "validation"], loc="upper left")
+plt.show()
+
+"""### **11). Evaluate the Model**
 Evaluate the model using test data
 """
 
 model.evaluate(test_data)
 
-"""### **11). Display Random Predicted Images**
+"""### **12). Display Random Predicted Images**
 Display info about predicted image, we can see if the image was predicted correctly or not
 """
 
@@ -133,7 +164,7 @@ for i, (image, label) in enumerate(
   plt.xticks([])
   plt.yticks([])
   plt.grid(False)
-  plt.imshow(image.numpy(), cmap=plt.cm.gray)
+  plt.imshow(image.numpy(), cmap="Greys")
 
   predict_label = predicts[i][0][0]
   color = get_label_color(predict_label,
@@ -143,7 +174,32 @@ for i, (image, label) in enumerate(
 
 plt.show()
 
-"""### **12). Deployment**
+"""### **13). Display the Confusion Matrix**
+Display info about prediction result in confusion matrix
+"""
+
+labels = os.listdir(os.path.join(image_path))
+labels.sort()
+
+label_dicts = {}
+
+for i in range(len(labels)):
+  label_dicts[labels[i]] = i
+
+predicts = model.predict_top_k(test_data)
+predict_labels = [ label_dicts[predicts[i][0][0]]
+                  for i, (image, label) in enumerate(test_data.gen_dataset().unbatch()) ]
+
+actual_labels = [ label.numpy()
+                  for i, (image, label) in enumerate(test_data.gen_dataset().unbatch()) ]
+
+plt.figure(figsize=(15, 10))
+medleaf_cm = confusion_matrix(y_true=actual_labels, y_pred=predict_labels)
+medleaf_cm = medleaf_cm / medleaf_cm.sum(axis=1) # To display conf. matrix in percetage %
+
+sn.heatmap(medleaf_cm, annot=True, cmap="Greens")
+
+"""### **14). Deployment**
 Export/deploy into TFLite Model File. Use for Android "Tumbuhin" app
 """
 
@@ -153,10 +209,23 @@ model.export(export_dir=".")
 
 model.export(export_dir=".", export_format=ExportFormat.LABEL)
 
-"""### **13). Evaluate The TFLite Model**
+"""### **15). Evaluate The TFLite Model**
 Evaluate the TFLite Model with test data (again)
 """
 
 model.evaluate_tflite("model.tflite", test_data)
 
-model.export(export_dir=".")
+"""### **16). Post Training/Model Quantization (Optional)**
+Post-training quantization is a conversion technique that can reduce model size and inference latency, while also improving CPU and hardware accelerator latency, with little degradation in model accuracy. Thus, it's widely used to optimize the model.
+<br>
+<br>
+More info about post training/quantization, click link below:
+<br>
+https://www.tensorflow.org/lite/performance/post_training_quantization
+"""
+
+quantizer = QuantizationConfig.for_int8(representative_data=test_data)
+
+model.export(export_dir=".", quantization_config=quantizer)
+
+model.evaluate_tflite("model.tflite", test_data)
